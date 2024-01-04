@@ -11,6 +11,7 @@ import api from "../../services/api";
 const ProjectList = () => {
   const [projects, setProjects] = useState(null);
   const [activeProjects, setActiveProjects] = useState(null);
+  const [budgets, setBudgets] = useState([])
 
   const history = useHistory();
 
@@ -33,9 +34,18 @@ const ProjectList = () => {
     setActiveProjects(p);
   };
 
+  const handleBudgetLoaded = (budgetData) => {
+    setBudgets(b => [...b, budgetData]);
+    // Room for upgrades: type of payment, average worked hour, etc.
+  }
+
   return (
     <div className="w-full p-2 md:!px-8">
       <Create onChangeSearch={handleSearch} />
+      <div className="py-3">
+        Total budget consumed by projects this month: 
+        <b> {budgets.reduce((a,b) => a + b.total, 0)}€</b>
+      </div>
       <div className="py-3">
         {activeProjects.map((hit) => {
           return (
@@ -56,7 +66,7 @@ const ProjectList = () => {
               </div>
               <div className="w-full md:w-[25%]  px-[10px]">
                 <span className="text-[16px] font-medium text-[#212325]">Budget consumed {hit.paymentCycle === "MONTHLY" && "this month"}:</span>
-                <Budget project={hit} />
+                <Budget project={hit} onLoad={handleBudgetLoaded}/>
               </div>
             </div>
           );
@@ -66,7 +76,7 @@ const ProjectList = () => {
   );
 };
 
-const Budget = ({ project }) => {
+const Budget = ({ project, onLoad }) => {
   const [activities, setActivities] = useState([10, 29, 18, 12]);
 
   useEffect(() => {
@@ -81,6 +91,7 @@ const Budget = ({ project }) => {
       const date = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1));
       const { data } = await api.get(`/activity?projectId=${encodeURIComponent(project._id)}&date=${dateQuery}${date.getTime()}`);
       setActivities(data);
+      onLoad({total: data.reduce((acc, cur) => acc + cur.value, 0)}); // Room for improvement
     })();
   }, []);
 
